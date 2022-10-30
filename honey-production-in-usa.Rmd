@@ -1,0 +1,76 @@
+---
+title: "Honey production in USA"
+author: "Ujan Dasgupta"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+library(tidyverse)
+library(tidytext)
+library(scales)
+```
+
+```{r}
+data <- read_csv("E:/visualisation-project/data/honeyproduction.csv")
+```
+
+```{r}
+data %>%
+  view()
+```
+
+```{r}
+data %>%
+  group_by(year) %>%
+  summarise(total_honey_prod = sum(totalprod)) %>%
+  ggplot(aes(year, total_honey_prod)) +
+    geom_line() +
+    scale_y_continuous(labels = comma) +
+    labs(title = "Total honey production",
+    x = "Year",
+    y = "Amount of honey in pounds")
+
+```
+```{r}
+data %>%
+  count(year)
+```
+
+```{r}
+data %>%
+  filter(year %in% c(max(year), min(year))) %>%
+  select(state, totalprod, year) %>%
+  pivot_wider(names_from = year, values_from = totalprod, names_prefix = "year_") %>%
+  group_by(state) %>%
+  summarise(change_in_prod = year_2012 - year_1998) %>%
+  filter(!is.na(change_in_prod)) %>%
+  mutate(state = fct_lump(state, 10 , w = abs(change_in_prod))) %>%
+  mutate(state = fct_reorder(state, -change_in_prod)) %>%
+  filter(state!= "Other") %>%
+  ggplot(aes(change_in_prod, state, fill=state)) +
+    geom_col() +
+    scale_x_continuous(labels = comma)
+```
+
+```{r}
+imp_states <- data %>%
+  filter(year %in% c(max(year), min(year))) %>%
+  select(state, totalprod, year) %>%
+  pivot_wider(names_from = year, values_from = totalprod, names_prefix = "year_") %>%
+  group_by(state) %>%
+  summarise(change_in_prod = year_2012 - year_1998) %>%
+  filter(!is.na(change_in_prod)) %>%
+  mutate(state = fct_lump(state, 10 , w = abs(change_in_prod))) %>%
+  mutate(state = fct_reorder(state, -change_in_prod)) %>%
+  filter(state!= "Other") %>%
+  distinct(state)
+
+data %>%
+  filter(state %in% as.character(as.array(imp_states$state))) %>%
+  ggplot(aes(x = as.factor(state), weight = yieldpercol))+
+    geom_bar() +
+    facet_wrap(~ year)
+```
+
